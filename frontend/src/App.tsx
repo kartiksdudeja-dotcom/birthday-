@@ -1529,11 +1529,49 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
 // MEMORY WALL (Kabir & Akriti)
 // ============================================================
 const MemoryWall = ({ onBack }: { onBack: () => void }) => {
+  const [activeCard, setActiveCard] = useState<'kabir' | 'akriti' | null>(null);
   const [kabirMemory, setKabirMemory] = useState('');
   const [akritiMemory, setAkritiMemory] = useState('');
-  const [activeCard, setActiveCard] = useState<'kabir' | 'akriti' | null>(null);
   const [kabirReaction, setKabirReaction] = useState<string | null>(null);
   const [akritiReaction, setAkritiReaction] = useState<string | null>(null);
+  const [allMemories, setAllMemories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMemories = () => {
+    setLoading(true);
+    axios.get('http://localhost:8080/api/memories')
+      .then(res => {
+        setAllMemories(res.data);
+      })
+      .catch(err => console.error("Failed to fetch memories:", err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMemories();
+  }, []);
+
+  const saveToDB = async (type: 'kabir' | 'akriti') => {
+    const content = type === 'kabir' ? kabirMemory : akritiMemory;
+    const reaction = type === 'kabir' ? kabirReaction : akritiReaction;
+    
+    if (!content && !reaction) return;
+
+    try {
+      await axios.post('http://localhost:8080/api/memories', {
+        type,
+        content: content || "(Shared a reaction ✨)",
+        reaction
+      });
+      // Refresh list
+      fetchMemories();
+      // Clear inputs
+      if (type === 'kabir') setKabirMemory('');
+      else setAkritiMemory('');
+    } catch (err) {
+      console.error("Save failed:", err);
+    }
+  };
 
   useEffect(() => {
     const mainAudio = document.getElementById('main-bg-music') as HTMLAudioElement;
@@ -1608,7 +1646,15 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
           <button onClick={onBack} className="btn-ghost" style={{ padding: '0.6rem 2rem' }}>Back</button>
         </div>
 
-        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2rem' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '10rem 0' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+              <Star style={{ width: 40, height: 40, color: '#ff87be' }} />
+            </motion.div>
+            <p style={{ marginTop: '2rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', letterSpacing: '0.2em' }}>FETCHING MEMORIES...</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '2rem' }}>
           {/* Kabir Card */}
           <motion.div
             layout
@@ -1654,12 +1700,38 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
                   style={{ overflow: 'hidden' }}
                 >
                   <div style={{ marginTop: '2rem' }}>
+                    {/* HISTORY LIST */}
+                    <div style={{ 
+                      maxHeight: '200px', 
+                      overflowY: 'auto', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '1rem',
+                      marginBottom: '2rem',
+                      padding: '1rem',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '1rem'
+                    }} className="hide-scroll">
+                      {allMemories.filter(m => m.type === 'kabir').length === 0 ? (
+                        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem', textAlign: 'center' }}>No history yet. Start writing! ✨</p>
+                      ) : (
+                        allMemories.filter(m => m.type === 'kabir').map((m, idx) => (
+                          <div key={idx} style={{ borderLeft: '2px solid rgba(96, 165, 250, 0.4)', paddingLeft: '1rem' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#60a5fa', fontWeight: 700, marginBottom: '0.2rem' }}>
+                               {m.reaction} {new Date(m.createdAt).toLocaleDateString()}
+                            </p>
+                            <p style={{ fontSize: '1rem', color: '#e0e0ff', fontStyle: 'italic' }}>&quot;{m.content}&quot;</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
                     <textarea 
                       value={kabirMemory} 
                       onChange={e => setKabirMemory(e.target.value)}
                       className="reflection-input" 
-                      placeholder="Write your bond/memory here..." 
-                      rows={5}
+                      placeholder="Add a new memory..." 
+                      rows={3}
                       style={{ fontSize: '1.1rem' }}
                     />
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
@@ -1675,8 +1747,15 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
                         </motion.button>
                       ))}
                     </div>
-                    <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }} className="btn-ghost" style={{ fontSize: '0.7rem' }}>Minimize Card</button>
+                    <div style={{ textAlign: 'center', marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); saveToDB('kabir'); }} 
+                        className="btn-primary" 
+                        style={{ padding: '0.6rem 2rem', fontSize: '0.8rem', background: 'linear-gradient(135deg, #60a5fa, #3b82f6)' }}
+                      >
+                        Pin to Wall 📌
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }} className="btn-ghost" style={{ fontSize: '0.7rem' }}>Minimize</button>
                     </div>
                   </div>
                 </motion.div>
@@ -1729,12 +1808,38 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
                   style={{ overflow: 'hidden' }}
                 >
                   <div style={{ marginTop: '2rem' }}>
+                    {/* HISTORY LIST */}
+                    <div style={{ 
+                      maxHeight: '200px', 
+                      overflowY: 'auto', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '1rem',
+                      marginBottom: '2rem',
+                      padding: '1rem',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '1rem'
+                    }} className="hide-scroll">
+                      {allMemories.filter(m => m.type === 'akriti').length === 0 ? (
+                        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem', textAlign: 'center' }}>No history yet. Start writing! ✨</p>
+                      ) : (
+                        allMemories.filter(m => m.type === 'akriti').map((m, idx) => (
+                          <div key={idx} style={{ borderLeft: '2px solid #ff87be', paddingLeft: '1rem' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#ff87be', fontWeight: 700, marginBottom: '0.2rem' }}>
+                               {m.reaction} {new Date(m.createdAt).toLocaleDateString()}
+                            </p>
+                            <p style={{ fontSize: '1rem', color: '#e0e0ff', fontStyle: 'italic' }}>&quot;{m.content}&quot;</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
                     <textarea 
                       value={akritiMemory} 
                       onChange={e => setAkritiMemory(e.target.value)}
                       className="reflection-input" 
-                      placeholder="Write your bond/memory here..." 
-                      rows={5}
+                      placeholder="Add a new memory..." 
+                      rows={3}
                       style={{ fontSize: '1.1rem' }}
                     />
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
@@ -1750,8 +1855,15 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
                         </motion.button>
                       ))}
                     </div>
-                    <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }} className="btn-ghost" style={{ fontSize: '0.7rem' }}>Minimize Card</button>
+                    <div style={{ textAlign: 'center', marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); saveToDB('akriti'); }} 
+                        className="btn-primary" 
+                        style={{ padding: '0.6rem 2rem', fontSize: '0.8rem', background: 'linear-gradient(135deg, #ff87be, #a855f7)' }}
+                      >
+                        Pin to Wall 📌
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }} className="btn-ghost" style={{ fontSize: '0.7rem' }}>Minimize</button>
                     </div>
                   </div>
                 </motion.div>
@@ -1759,6 +1871,7 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
             </AnimatePresence>
           </motion.div>
         </div>
+        )}
 
         {/* Global End Actions */}
         {(kabirMemory || akritiMemory || kabirReaction || akritiReaction) && (

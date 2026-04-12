@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Heart, Star, Gift, MessageSquare, History, Save, ArrowDown, IceCream, Cookie, Coffee, Sparkles, Crown, Music } from 'lucide-react';
 import axios from 'axios';
-import finallyMetImage from './assessts/663968787_2104999393401571_6152688826169005121_n.jpg';
-import finallyMetMusic from './assessts/Finally we Met-Downringtone.com.mp3';
-import khatMusic from './assessts/Khat Ringtone Download - MobCup.Com.Co.mp3';
-import reelAudio from './assessts/ReelAudio-62776.mp3';
-import peaceMusic from './assessts/peace.mp3';
-import sheMusic from './assessts/she.mp3';
-import birthdayMusic from './assessts/birthday.mp3';
-import milangaMusic from './assessts/milanga.mp3';
+import finallyMetImage from './assets/663968787_2104999393401571_6152688826169005121_n.jpg';
+import finallyMetMusic from './assets/Finally we Met-Downringtone.com.mp3';
+import khatMusic from './assets/Khat Ringtone Download - MobCup.Com.Co.mp3';
+import reelAudio from './assets/ReelAudio-62776.mp3';
+import peaceMusic from './assets/peace.mp3';
+import sheMusic from './assets/she.mp3';
+import birthdayMusic from './assets/birthday.mp3';
+import milangaMusic from './assets/milanga.mp3';
 
 // ============================================================
 // CONFETTI SYSTEM

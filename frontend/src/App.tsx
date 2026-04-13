@@ -11,6 +11,8 @@ import sheMusic from './assets/she.mp3';
 import birthdayMusic from './assets/birthday.mp3';
 import milangaMusic from './assets/milanga.mp3';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 // ============================================================
 // CONFETTI SYSTEM
 // ============================================================
@@ -720,7 +722,7 @@ const PostalEnvelope = ({ data, delay, index }: { data: typeof postalData[0]; de
                           e.stopPropagation();
                           setSelectedReaction(emoji); // PERSIST REACTION
                           // Save to DB
-                          axios.post('http://localhost:8080/api/reactions', { cardIndex: index, emoji })
+                          axios.post(`${API_URL}/api/reactions`, { cardIndex: index, emoji })
                             .catch(err => console.error("Failed to save reaction:", err));
                           const x = e.clientX;
                           const y = e.clientY;
@@ -761,7 +763,7 @@ const PostalEnvelope = ({ data, delay, index }: { data: typeof postalData[0]; de
                         e.stopPropagation();
                         setSelectedReaction('💖'); // PERSIST 'ALL LOVE'
                         // Save to DB
-                        axios.post('http://localhost:8080/api/reactions', { cardIndex: index, emoji: 'GIVE_ALL_LOVE' })
+                        axios.post(`${API_URL}/api/reactions`, { cardIndex: index, emoji: 'GIVE_ALL_LOVE' })
                           .catch(err => console.error("Failed to save multi-reaction:", err));
                         ['❤️', '💖', '💗', '💓', '💞', '💘', '✨'].forEach((emoji, idx) => {
                           setTimeout(() => {
@@ -1453,13 +1455,20 @@ const MusicPlayer = () => {
 // ADMIN PANEL (View her replies)
 // ============================================================
 const AdminPanel = ({ onBack }: { onBack: () => void }) => {
-  const [replies, setReplies] = useState<any[]>([]);
+  const [reflections, setReflections] = useState<any[]>([]);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'reflections' | 'memories'>('reflections');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:8080/api/reflections')
-      .then(res => setReplies(res.data)) // Backend already returns newest first
-      .catch(err => console.log("Admin Panel connection failed", err))
+    setLoading(true);
+    Promise.all([
+      axios.get(`${API_URL}/api/reflections`),
+      axios.get(`${API_URL}/api/memories`)
+    ]).then(([refRes, memRes]) => {
+      setReflections(refRes.data);
+      setMemories(memRes.data);
+    }).catch(err => console.log("Admin Panel connection failed", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -1475,12 +1484,36 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
     >
       <Universe />
       <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <div>
-            <h1 className="glow-text-xl" style={{ fontSize: '2.5rem', fontWeight: 900 }}>Noor&apos;s Reflections</h1>
-            <p style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.2em', textTransform: 'uppercase', fontSize: '0.7rem', marginTop: '0.5rem' }}>Admin Control Center</p>
+            <h1 className="glow-text-xl" style={{ fontSize: '2.5rem', fontWeight: 900 }}>Admin Center</h1>
+            <p style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.2em', textTransform: 'uppercase', fontSize: '0.7rem', marginTop: '0.5rem' }}>View Noor's Magic ✨</p>
           </div>
           <button onClick={onBack} className="btn-ghost" style={{ padding: '0.6rem 1.5rem' }}>Back to Start</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem' }}>
+          <button 
+            onClick={() => setActiveTab('reflections')}
+            style={{ 
+              padding: '0.8rem 1.5rem', borderRadius: '1rem', border: 'none', 
+              background: activeTab === 'reflections' ? 'rgba(255,135,190,0.2)' : 'rgba(255,255,255,0.05)',
+              color: activeTab === 'reflections' ? '#ff87be' : '#aaa', cursor: 'pointer', transition: '0.3s', fontWeight: 700
+            }}
+          >
+            Reflections ({reflections.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('memories')}
+            style={{ 
+              padding: '0.8rem 1.5rem', borderRadius: '1rem', border: 'none', 
+              background: activeTab === 'memories' ? 'rgba(96,165,250,0.2)' : 'rgba(255,255,255,0.05)',
+              color: activeTab === 'memories' ? '#60a5fa' : '#aaa', cursor: 'pointer', transition: '0.3s', fontWeight: 700
+            }}
+          >
+            Memories Wall ({memories.length})
+          </button>
         </div>
 
         {loading ? (
@@ -1489,35 +1522,33 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
               <Sparkles style={{ width: 40, height: 40, color: '#ff87be' }} />
             </motion.div>
           </div>
-        ) : replies.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '10rem 0', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-            <p style={{ color: 'rgba(255,255,255,0.3)' }}>No messages found yet...</p>
-          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {replies.map((reply, i) => (
-              <motion.div
-                key={reply.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="glass-card"
-                style={{ padding: '2rem', borderRadius: '1.5rem', position: 'relative' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <div style={{ padding: '0.5rem', background: 'rgba(255,135,190,0.1)', borderRadius: '0.5rem' }}>
-                      <Heart style={{ width: 16, height: 16, color: '#ff87be' }} />
-                    </div>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ff87be' }}>Reply #{replies.length - i}</span>
+            {activeTab === 'reflections' ? (
+              reflections.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '4rem' }}>No reflections yet...</p>
+              ) : reflections.map((item, i) => (
+                <motion.div key={item._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ padding: '2rem', borderRadius: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: '#ff87be', fontWeight: 700 }}>#{reflections.length - i} Reflection</span>
+                    <span style={{ fontSize: '0.7rem', color: '#666' }}>{new Date(item.createdAt).toLocaleString()}</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>{new Date(reply.createdAt).toLocaleString()}</span>
-                </div>
-                <p style={{ fontSize: '1.1rem', lineHeight: 1.6, color: '#e0e0ff', fontStyle: 'italic', fontFamily: "'Playfair Display', serif" }}>
-                  &quot;{reply.content}&quot;
-                </p>
-              </motion.div>
-            ))}
+                  <p style={{ fontSize: '1.1rem', color: '#e0e0ff' }}>"{item.content}"</p>
+                </motion.div>
+              ))
+            ) : (
+              memories.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '4rem' }}>No memories yet...</p>
+              ) : memories.map((item, i) => (
+                <motion.div key={item._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ padding: '2rem', borderRadius: '1.5rem', borderLeft: `4px solid ${item.type === 'kabir' ? '#60a5fa' : '#ff87be'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ color: item.type === 'kabir' ? '#60a5fa' : '#ff87be', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>{item.type}'s memory {item.reaction}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#666' }}>{new Date(item.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p style={{ fontSize: '1.1rem', color: '#e0e0ff' }}>"{item.content}"</p>
+                </motion.div>
+              ))
+            )}
           </div>
         )}
       </div>
@@ -1539,7 +1570,7 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
 
   const fetchMemories = () => {
     setLoading(true);
-    axios.get('http://localhost:8080/api/memories')
+    axios.get(`${API_URL}/api/memories`)
       .then(res => {
         setAllMemories(res.data);
       })
@@ -1558,7 +1589,7 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
     if (!content && !reaction) return;
 
     try {
-      await axios.post('http://localhost:8080/api/memories', {
+      await axios.post(`${API_URL}/api/memories`, {
         type,
         content: content || "(Shared a reaction ✨)",
         reaction
@@ -1566,8 +1597,13 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
       // Refresh list
       fetchMemories();
       // Clear inputs
-      if (type === 'kabir') setKabirMemory('');
-      else setAkritiMemory('');
+      if (type === 'kabir') {
+        setKabirMemory('');
+        setKabirReaction(null);
+      } else {
+        setAkritiMemory('');
+        setAkritiReaction(null);
+      }
     } catch (err) {
       console.error("Save failed:", err);
     }
@@ -1886,14 +1922,14 @@ const MemoryWall = ({ onBack }: { onBack: () => void }) => {
               onClick={async () => {
                 try {
                   if (kabirMemory || kabirReaction) {
-                    await axios.post('http://localhost:8080/api/memories', {
+                    await axios.post(`${API_URL}/api/memories`, {
                       type: 'kabir',
                       content: kabirMemory || "(No text, just love)",
                       reaction: kabirReaction
                     });
                   }
                   if (akritiMemory || akritiReaction) {
-                    await axios.post('http://localhost:8080/api/memories', {
+                    await axios.post(`${API_URL}/api/memories`, {
                       type: 'akriti',
                       content: akritiMemory || "(No text, just love)",
                       reaction: akritiReaction
@@ -2001,7 +2037,7 @@ const App = () => {
   useEffect(() => {
     const saved = localStorage.getItem('noor_reflection');
     if (saved) setReflection(saved);
-    axios.get('http://localhost:8080/api/reflections/latest')
+    axios.get(`${API_URL}/api/reflections/latest`)
       .then(res => setReflection(res.data.content || ''))
       .catch(() => console.log("Backend connection failed. Using local storage."));
   }, []);
@@ -2009,7 +2045,7 @@ const App = () => {
   const saveReflection = async () => {
     localStorage.setItem('noor_reflection', reflection);
     try {
-      await axios.post('http://localhost:8080/api/reflections', { content: reflection });
+      await axios.post(`${API_URL}/api/reflections`, { content: reflection });
       alert('Saved to cloud ✨');
       setReflection(''); // Clear input after save
       localStorage.removeItem('noor_reflection');

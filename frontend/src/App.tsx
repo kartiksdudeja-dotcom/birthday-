@@ -1539,7 +1539,7 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
             ) : (
               memories.length === 0 ? (
                 <p style={{ textAlign: 'center', color: '#666', padding: '4rem' }}>No memories yet...</p>
-              ) : memories.map((item, i) => (
+              ) : memories.map((item) => (
                 <motion.div key={item._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ padding: '2rem', borderRadius: '1.5rem', borderLeft: `4px solid ${item.type === 'kabir' ? '#60a5fa' : '#ff87be'}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                     <span style={{ color: item.type === 'kabir' ? '#60a5fa' : '#ff87be', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>{item.type}'s memory {item.reaction}</span>
